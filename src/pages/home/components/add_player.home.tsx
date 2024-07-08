@@ -19,7 +19,7 @@ const AddNewPlayerButton: React.FC = () => {
             home.notify_error("Name or mail empty! Please fill all the required fields!");
             return;
         }
-        home.addPlayer(values.name, values.mail)
+        home.createPlayer(values.name, values.mail)
         hide();
     };
 

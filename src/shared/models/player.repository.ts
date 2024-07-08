@@ -1,5 +1,5 @@
-import {Player} from "./player.model";
-import {supabase} from "../../config/supabase";
+import { Player } from "./player.model";
+import { supabase } from "../../config/supabase";
 import { Team } from "./team.model";
 
 async function getAllPlayers(): Promise<Player[] | undefined> {
@@ -19,39 +19,42 @@ async function getAllPlayers(): Promise<Player[] | undefined> {
     }
 }
 
-async function getAllPlayersByTeam(teamId: string): Promise<Player[] | undefined> {
+async function getPlayersWithoutTeam(): Promise<Player[]> {
     try {
-        const request = await supabase
-            .from("player_team")
-            .select("*")
-            .eq("team", teamId);
+        // Première requête pour obtenir tous les IDs des joueurs qui sont dans une équipe
+        const { data: playerTeamData, error: playerTeamError } = await supabase
+            .from('player_team')
+            .select('player');
 
-        if (request.error) {
-            return undefined;
+        if (playerTeamError) {
+            console.error(playerTeamError);
+            return [];
         }
 
-        return request.data as Player[];
-    } catch (e) {
-        console.error(e);
-        return undefined;
-    }
-}
-async function getAllTeams(): Promise<Team[] | undefined> {
-    try {
-        const request = await supabase
-            .from("teams")
-            .select("*");
-        
-        if (request.error) {
-            return undefined;
+        let query = supabase.from("player").select("*");
+
+        // Si player_team n'est pas vide, on filtre les joueurs
+        if (playerTeamData && playerTeamData.length > 0) {
+            const playerIdsInTeam = playerTeamData.map(item => item.player);
+            query = query.not('id', 'in', '(' + playerIdsInTeam + ')');
         }
 
-        return request.data as Team[];
+        // Exécution de la requête
+        const { data: playersData, error: playersError } = await query;
+
+        if (playersError) {
+            console.error(playersError);
+            return [];
+        }
+
+        return playersData as Player[];
     } catch (e) {
         console.error(e);
-        return undefined;
+        return [];
     }
 }
+
+
 
 async function getPlayerById(id: string): Promise<Player | undefined> {
     try {
@@ -71,5 +74,11 @@ async function getPlayerById(id: string): Promise<Player | undefined> {
         return undefined;
     }
 }
+async function createPlayerRepo(name: string, mail: string) {
+    console.log(name, mail)
+    const { error } = await supabase
+        .from('player')
+        .insert({ name: name, mail: mail, })
+}
 
-export { getAllPlayers, getPlayerById, getAllTeams, getAllPlayersByTeam};
+export { getAllPlayers, getPlayerById, getPlayersWithoutTeam, createPlayerRepo };

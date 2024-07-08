@@ -18,7 +18,7 @@ const AddNewTeamButton: React.FC = () => {
             home.notify_error("Name empty! Please fill all the required fields!");
             return;
         }
-        home.addTeam(values.name)
+        home.createTeam(values.name)
         hide();
     };
 
