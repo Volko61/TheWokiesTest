@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Player } from "../../../shared/models/player.model";
 import { getAllPlayers, createPlayerRepo, getPlayersWithoutTeam } from "../../../shared/models/player.repository";
 import { createTeamRepo, getAllTeams, } from "../../../shared/models/team.repository";
-import { assignPlayerToTeamRepo, getAllPlayer_Team, getAllPlayersByTeam, } from "../../../shared/models/player_team.repository";
+import { createInvitationRepo, getStatusOfPlayerByIdRepo } from "../../../shared/models/invitation.repository";
+import { assignPlayerToTeamRepo, getAllPlayer_Team, getAllPlayersByTeam, removePlayerFromTeamRepo } from "../../../shared/models/player_team.repository";
 import { notification } from "antd";
 import { supabase } from "../../../config/supabase";
 import { Team } from "../../../shared/models/team.model";
@@ -59,15 +60,39 @@ export default function useHome() {
 
         return error
     }
-    const handlePlayerAssignment = async (playerId: string, teamId: string) => {
-        setLoading(true);
-        const error = await assignPlayerToTeam(playerId, teamId);
+    async function removePlayerFromTeam(playerId: string, teamId: string) {
+        const error = await removePlayerFromTeamRepo(playerId, teamId)
+        setLoading(false);
+
         if (error) {
-            notify_error(`Failed to assign player: ${error.message}`);
+            notification.error({ message: error.message })
+        }
+
+        return error
+    }
+
+    const handlePlayerAssignment = async (playerId: string, newTeamId: string, oldTeamId: string | null) => {
+        setLoading(true);
+        let error;
+
+        if (oldTeamId) {
+            error = await removePlayerFromTeam(playerId, oldTeamId);
+            if (error) {
+                notify_error(`Failed to remove player from old team: ${error.message}`);
+                setLoading(false);
+                return;
+            }
+        }
+
+        error = await assignPlayerToTeam(playerId, newTeamId);
+        if (error) {
+            notify_error(`Failed to assign player to new team: ${error.message}`);
         } else {
             notification.success({ message: "Player assigned successfully" });
             await fetchPlayers();
             await fetchTeams();
+            await fetchPlayer_Team();
+            await fetchPlayersWihoutTeam();
         }
         setLoading(false);
     };
@@ -94,8 +119,21 @@ export default function useHome() {
         setPlayer_Team_Map(player_team);
     }
 
+    const getStatusOfPlayerById = async (playerId: string): Promise<string> => {
+        try {
+            const status = await getStatusOfPlayerByIdRepo(playerId);
+            return status;
+        } catch (error) {
+            console.error('Error in getStatusOfPlayerById:', error);
+            return '';
+        }
+    }
+
     const createPlayer = async (name: string, mail: string) => {
-        createPlayerRepo(name, mail)
+        const id = await createPlayerRepo(name, mail)
+        if (id) await createInvitationRepo(id.toString())
+        notification.success({ message: `Player ${name} created successfully` })
+        notification.success({ message: `He can validate via this link : http://localhost:3000/invite/${id}` })
     }
 
     const createTeam = async (name: string) => {
@@ -106,7 +144,14 @@ export default function useHome() {
         notification.error({ message: message });
     }
 
+
     useEffect(() => {
+               
+        fetchPlayers();
+        fetchPlayer_Team();
+        fetchPlayersWihoutTeam();
+        fetchTeams();
+        
         // 1. Create a realtime subscription to the 'player' table
         const playerSubscription = supabase
             .channel('player_changes')
@@ -114,7 +159,6 @@ export default function useHome() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'player' },
                 (payload) => {
-                    console.log('Player change received!', payload)
                     fetchPlayers();
                     fetchPlayersWihoutTeam();
                 }
@@ -128,7 +172,6 @@ export default function useHome() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'team' },
                 (payload) => {
-                    console.log('Team change received!', payload)
                     fetchTeams();
                 }
             )
@@ -141,7 +184,6 @@ export default function useHome() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'player_team' },
                 (payload) => {
-                    console.log('Team change received!', payload)
                     fetchPlayer_Team();
                     fetchPlayersWihoutTeam();
                     fetchPlayers();
@@ -149,11 +191,7 @@ export default function useHome() {
                 }
             )
             .subscribe();
-
-        fetchPlayers();
-        fetchPlayer_Team();
-        fetchPlayersWihoutTeam();
-        fetchTeams();
+     
 
         // Cleanup function to remove subscriptions
         return () => {
@@ -177,6 +215,7 @@ export default function useHome() {
         fetchPlayer_Team,
         teams,
         player_team_map,
-        playersWithoutTeams
+        playersWithoutTeams,
+        getStatusOfPlayerById
     }
 }

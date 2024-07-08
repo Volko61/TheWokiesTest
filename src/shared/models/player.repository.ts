@@ -67,18 +67,35 @@ async function getPlayerById(id: string): Promise<Player | undefined> {
         if (request.error) {
             return undefined;
         }
-
         return request.data as Player;
     } catch (e) {
         console.error(e);
         return undefined;
     }
 }
-async function createPlayerRepo(name: string, mail: string) {
-    console.log(name, mail)
-    const { error } = await supabase
-        .from('player')
-        .insert({ name: name, mail: mail, })
+async function createPlayerRepo(name: string, mail: string): Promise<number | null> {
+    try {
+        const { data, error } = await supabase
+            .from('player')
+            .insert({ name: name, mail: mail })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating player:', error);
+            return null;
+        }
+
+        if (data && 'id' in data) {
+            return data.id as number;
+        } else {
+            console.error('Player created but no ID returned');
+            return null;
+        }
+    } catch (e) {
+        console.error('Unexpected error:', e);
+        return null;
+    }
 }
 
 export { getAllPlayers, getPlayerById, getPlayersWithoutTeam, createPlayerRepo };

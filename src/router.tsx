@@ -6,7 +6,7 @@ export default function AppRouter() {
     return (
         <Router>
             <Routes>
-                <Route path="/invite" element={<InvitePage/>}/>
+                <Route path="/invite/:playerId" element={<InvitePage/>}/>
                 <Route path="/" element={<HomePage/>}/>
             </Routes>
         </Router>

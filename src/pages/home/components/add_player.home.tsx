@@ -91,7 +91,7 @@ const AddNewPlayerButton: React.FC = () => {
             open={open}
             onOpenChange={handleOpenChange}
         >
-            <Button type={"primary"} size={"large"}><UserAddOutlined /></Button>
+            <Button type={"primary"} size={"large"}><UserAddOutlined /> | Create a new player</Button>
         </Popover>
     );
 };

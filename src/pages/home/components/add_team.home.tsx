@@ -73,7 +73,7 @@ const AddNewTeamButton: React.FC = () => {
             open={open}
             onOpenChange={handleOpenChange}
         >
-            <Button type={"primary"} size={"large"}><UsergroupAddOutlined /></Button>
+            <Button type={"primary"} size={"large"}><UsergroupAddOutlined /> | Create a new team</Button>
         </Popover>
     );
 };

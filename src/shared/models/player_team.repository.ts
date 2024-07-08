@@ -72,4 +72,11 @@ async function getAllPlayersByTeam(teamId: string): Promise<Player[] | undefined
     }
 }
 
-export { assignPlayerToTeamRepo, getAllPlayer_Team, getAllPlayersByTeam };
+const removePlayerFromTeamRepo = async (playerId: string, teamId: string) => {
+    const { error } = await supabase
+        .from('player_team')
+        .delete()
+        .match({ player: playerId, team: teamId });
+    return error;
+}
+export { assignPlayerToTeamRepo, getAllPlayer_Team, getAllPlayersByTeam, removePlayerFromTeamRepo };
